@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -10,14 +12,22 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.routes import analyze, generate, health, teach
 
+logger = logging.getLogger(__name__)
+
 # Absolute path so StaticFiles works regardless of CWD (local, Vercel, Docker)
 _STATIC_DIR = Path(__file__).parent.parent / "static"
+
+# Tell music21 not to write config/cache files — required on read-only filesystems
+os.environ.setdefault("MUSIC21_COMMON_CORPUS_CACHE_DISABLED", "1")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.db import init_db
-    await init_db()
+    try:
+        from app.db import init_db
+        await init_db()
+    except Exception as e:
+        logger.warning("DB init failed (non-fatal on serverless): %s", e)
     yield
 
 
