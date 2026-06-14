@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.routes import analyze, generate, health, teach
+
+# Absolute path so StaticFiles works regardless of CWD (local, Vercel, Docker)
+_STATIC_DIR = Path(__file__).parent.parent / "static"
 
 
 @asynccontextmanager
@@ -42,7 +46,8 @@ def create_app() -> FastAPI:
     app.include_router(teach.router, prefix="/api/v1", tags=["teach"])
 
     # Static last — must not shadow API routes
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
+    if _STATIC_DIR.exists():
+        app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
 
     return app
 
