@@ -1,6 +1,5 @@
-from unittest.mock import AsyncMock, patch
-
 import pytest
+from unittest.mock import AsyncMock
 
 from app.core.generation import _fallback_piece
 from app.core.render_audio import render_to_midi, render_to_wav
@@ -16,15 +15,15 @@ async def test_render_to_midi_magic_bytes():
     assert midi[:4] == b"MThd"
 
 
-def test_render_to_musicxml_contains_score_partwise():
+def test_render_to_musicxml_contains_marker():
     p = _fallback_piece("test")
     xml = render_to_musicxml(p)
     assert isinstance(xml, str)
     assert "score-partwise" in xml
 
 
-def test_render_to_svg_fallback_is_nonempty():
-    """When Verovio is not installed, render_to_svg returns a non-empty fallback string."""
+def test_render_to_svg_returns_non_empty_string():
+    # Verovio likely not installed in CI — fallback string is fine
     p = _fallback_piece("test")
     result = render_to_svg(p)
     assert isinstance(result, str)
@@ -33,29 +32,25 @@ def test_render_to_svg_fallback_is_nonempty():
 
 @pytest.mark.asyncio
 async def test_render_to_wav_returns_none_when_unavailable():
-    """render_to_wav returns None when the provider raises ProviderUnavailableError."""
-    from app.providers.base import AudioProvider
-
-    class UnavailableAudio(AudioProvider):
-        async def synthesize(self, midi_bytes: bytes, sf2_path: str) -> bytes:
-            raise ProviderUnavailableError("no fluidsynth in test")
-
+    """render_to_wav must return None, not raise, when the provider is unavailable."""
     p = _fallback_piece("test")
-    result = await render_to_wav(p, UnavailableAudio())
+
+    class FailAudio:
+        async def synthesize(self, midi_bytes, sf2_path):
+            raise ProviderUnavailableError("no fluidsynth")
+
+    result = await render_to_wav(p, FailAudio())
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_render_to_wav_returns_bytes_when_available():
-    """render_to_wav returns bytes when the provider succeeds."""
-    from app.providers.base import AudioProvider
+async def test_render_to_wav_returns_bytes_when_provider_works():
+    p = _fallback_piece("test")
+    fake_wav = b"RIFF\x00\x00\x00\x00WAVE"
 
-    fake_wav = b"RIFF" + b"\x00" * 36  # minimal fake WAV header
-
-    class FakeAudio(AudioProvider):
-        async def synthesize(self, midi_bytes: bytes, sf2_path: str) -> bytes:
+    class FakeAudio:
+        async def synthesize(self, midi_bytes, sf2_path):
             return fake_wav
 
-    p = _fallback_piece("test")
     result = await render_to_wav(p, FakeAudio())
     assert result == fake_wav

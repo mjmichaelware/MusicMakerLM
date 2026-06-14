@@ -3,4 +3,4 @@ set -euo pipefail
 MODEL="${OLLAMA_MODEL:-llama3}"
 echo "Pulling Ollama model: $MODEL"
 ollama pull "$MODEL"
-echo "Model $MODEL ready."
+echo "Done. Start the server: ollama serve"

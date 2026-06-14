@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 .env
 *.wav
+*.mp3
 *.mid
 *.midi
 *.sf2
@@ -18,6 +19,7 @@ build/
 *.egg-info/
 .mypy_cache/
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 .venv/

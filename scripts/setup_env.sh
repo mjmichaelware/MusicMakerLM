@@ -3,31 +3,35 @@ set -euo pipefail
 
 echo "=== MusicMakerLM environment setup ==="
 
-# FluidSynth (optional — WAV synthesis)
-if command -v apt-get &>/dev/null; then
-    echo "Installing FluidSynth via apt..."
-    sudo apt-get install -y fluidsynth || echo "WARNING: Could not install FluidSynth automatically."
+# FluidSynth
+if command -v fluidsynth &>/dev/null; then
+  echo "FluidSynth already installed: $(fluidsynth --version 2>&1 | head -1)"
+elif command -v apt-get &>/dev/null; then
+  echo "Installing FluidSynth via apt..."
+  sudo apt-get install -y fluidsynth
 elif command -v brew &>/dev/null; then
-    echo "Installing FluidSynth via brew..."
-    brew install fluid-synth || echo "WARNING: Could not install FluidSynth automatically."
+  echo "Installing FluidSynth via brew..."
+  brew install fluid-synth
 else
-    echo "WARNING: Cannot detect package manager. Install FluidSynth manually."
+  echo "WARNING: Cannot install FluidSynth automatically. Install it manually."
+  echo "  Ubuntu/Debian: apt-get install fluidsynth"
+  echo "  macOS:         brew install fluid-synth"
 fi
 
-# Copy .env if it doesn't exist
+# Copy .env
 if [ ! -f .env ]; then
-    cp .env.example .env
-    echo "Created .env from .env.example — review and update as needed."
+  cp .env.example .env
+  echo "Created .env from .env.example"
 fi
 
-# Python dependencies
+# Python deps
 pip install -r requirements-dev.txt
 
-# Smoke test imports
-python -c "import music21; import mido; import fastapi; print('Core imports OK')"
+# Smoke test music21
+python -c "import music21; print('music21:', music21.__version__)"
 
 echo "=== Setup complete ==="
 echo "Next steps:"
-echo "  1. Run Ollama:  ollama serve  (in a separate terminal)"
-echo "  2. Pull model:  ./scripts/pull_llm_model.sh"
-echo "  3. Start app:   ./run.sh"
+echo "  1. Run: bash scripts/pull_llm_model.sh   (needs Ollama installed)"
+echo "  2. Download a SoundFont to soundfonts/GeneralUser.sf2"
+echo "  3. Run: ./run.sh"

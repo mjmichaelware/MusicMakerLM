@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -17,33 +19,32 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    application = FastAPI(
+    app = FastAPI(
         title="MusicMakerLM",
         version="0.1.0",
-        description="Generate, analyze, and teach music — symbolic core, $0 to build.",
         debug=settings.debug,
         lifespan=lifespan,
     )
 
-    application.add_middleware(
+    app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Health check — no versioned prefix so monitoring tools can reach it simply
-    application.include_router(health.router, tags=["meta"])
+    # Health at root — outside versioning
+    app.include_router(health.router, tags=["meta"])
 
     # Versioned API
-    application.include_router(generate.router, prefix="/api/v1", tags=["generate"])
-    application.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
-    application.include_router(teach.router, prefix="/api/v1", tags=["teach"])
+    app.include_router(generate.router, prefix="/api/v1", tags=["generate"])
+    app.include_router(analyze.router, prefix="/api/v1", tags=["analyze"])
+    app.include_router(teach.router, prefix="/api/v1", tags=["teach"])
 
-    # Static files MUST be last — it catches all remaining paths
-    application.mount("/", StaticFiles(directory="static", html=True), name="static")
+    # Static last — must not shadow API routes
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
-    return application
+    return app
 
 
 app = create_app()

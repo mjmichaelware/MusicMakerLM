@@ -3,34 +3,38 @@ const API = "/api/v1";
 const promptEl       = document.getElementById("prompt");
 const generateBtn    = document.getElementById("generate-btn");
 const statusEl       = document.getElementById("status");
-const resultsEl      = document.getElementById("results");
-const scoreEl        = document.getElementById("score-container");
 const playerEl       = document.getElementById("player");
-const audioUnavailEl = document.getElementById("audio-unavailable");
-const midiDlEl       = document.getElementById("midi-download");
-const analysisEl     = document.getElementById("analysis-output");
-const explanationEl  = document.getElementById("explanation-output");
+const audioUnavail   = document.getElementById("audio-unavailable");
+const midiDownload   = document.getElementById("midi-download");
+const scoreContainer = document.getElementById("score-container");
+const analysisOut    = document.getElementById("analysis-output");
+const explanationOut = document.getElementById("explanation-output");
 
-function setStatus(msg, show = true) {
+function setStatus(msg, isError = false) {
   statusEl.textContent = msg;
-  statusEl.classList.toggle("hidden", !show);
+  statusEl.className = isError ? "error" : "";
 }
 
-function b64ToBlob(b64, mimeType) {
+function b64ToBlob(b64, type) {
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-  return new Blob([bytes], { type: mimeType });
+  return new Blob([bytes], { type });
 }
 
 generateBtn.addEventListener("click", async () => {
   const prompt = promptEl.value.trim();
-  if (!prompt) return;
+  if (!prompt) { setStatus("Enter a prompt first.", true); return; }
 
   generateBtn.disabled = true;
-  setStatus("Generating...");
-  resultsEl.classList.add("hidden");
+  setStatus("Generating…");
+  scoreContainer.textContent = "";
+  analysisOut.textContent = "";
+  explanationOut.textContent = "";
+  playerEl.src = "";
+  midiDownload.style.display = "none";
+  audioUnavail.style.display = "none";
 
   try {
-    // --- Generate ---
+    // 1. Generate
     const genRes = await fetch(`${API}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,28 +43,29 @@ generateBtn.addEventListener("click", async () => {
     if (!genRes.ok) throw new Error(`Generate failed: ${genRes.status}`);
     const gen = await genRes.json();
 
-    // MusicXML display (OSMD deferred — Issue #3)
-    scoreEl.textContent = gen.musicxml;
+    // Show MusicXML (OSMD will replace this in Issue #3)
+    scoreContainer.textContent = gen.musicxml;
 
-    // MIDI download link (MIDI is for download; browsers don't play .mid natively)
-    const midBlob = b64ToBlob(gen.midi_b64, "audio/midi");
-    midiDlEl.href = URL.createObjectURL(midBlob);
-    midiDlEl.classList.remove("hidden");
-
-    // WAV audio player — only when FluidSynth was available
+    // Audio player — WAV if available, else show unavailable message
     if (gen.wav_b64) {
       const wavBlob = b64ToBlob(gen.wav_b64, "audio/wav");
       playerEl.src = URL.createObjectURL(wavBlob);
-      playerEl.classList.remove("hidden");
-      audioUnavailEl.classList.add("hidden");
+      playerEl.style.display = "";
+      audioUnavail.style.display = "none";
     } else {
-      playerEl.classList.add("hidden");
-      audioUnavailEl.classList.remove("hidden");
+      playerEl.style.display = "none";
+      audioUnavail.style.display = "";
     }
 
-    setStatus("Analyzing...");
+    // MIDI download link
+    const midiBlob = b64ToBlob(gen.midi_b64, "audio/midi");
+    midiDownload.href = URL.createObjectURL(midiBlob);
+    midiDownload.download = (gen.piece_json.title || "piece") + ".mid";
+    midiDownload.style.display = "";
 
-    // --- Teach (analysis + explanation in one call) ---
+    setStatus("Analyzing and explaining…");
+
+    // 2. Teach
     const teachRes = await fetch(`${API}/teach`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,13 +74,11 @@ generateBtn.addEventListener("click", async () => {
     if (!teachRes.ok) throw new Error(`Teach failed: ${teachRes.status}`);
     const teach = await teachRes.json();
 
-    analysisEl.textContent = JSON.stringify(teach.analysis, null, 2);
-    explanationEl.textContent = teach.explanation;
-
-    resultsEl.classList.remove("hidden");
-    setStatus("", false);
+    analysisOut.textContent = JSON.stringify(teach.analysis, null, 2);
+    explanationOut.textContent = teach.explanation;
+    setStatus("Done.");
   } catch (err) {
-    setStatus(`Error: ${err.message}`);
+    setStatus(err.message, true);
   } finally {
     generateBtn.disabled = false;
   }

@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import base64
-from typing import Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -21,7 +22,7 @@ class GenerateResponse(BaseModel):
     piece_json: dict
     musicxml: str
     midi_b64: str
-    wav_b64: Optional[str] = None
+    wav_b64: str | None = None
 
 
 @router.post("/generate", response_model=GenerateResponse)

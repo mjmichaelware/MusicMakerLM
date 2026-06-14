@@ -1,12 +1,17 @@
-from typing import AsyncIterator
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, AsyncIterator
 
 from app.providers.base import LLMProvider, ProviderUnavailableError
 
+if TYPE_CHECKING:
+    from app.config import Settings
+
 
 class OpenAIProvider(LLMProvider):
-    """Stub — constructor succeeds; methods raise until Issue #7 is implemented."""
+    """Stub — not implemented in the starting tree. See GitHub Issue #7."""
 
-    def __init__(self, settings) -> None:
+    def __init__(self, settings: "Settings") -> None:
         self._settings = settings
 
     async def complete(self, prompt: str) -> str:
@@ -18,4 +23,4 @@ class OpenAIProvider(LLMProvider):
         raise ProviderUnavailableError(
             "OpenAI provider not implemented in the starting tree. See GitHub Issue #7."
         )
-        yield  # make it an async generator
+        yield  # make static analysis happy

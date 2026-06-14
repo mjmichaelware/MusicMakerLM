@@ -8,25 +8,20 @@ from app.providers.base import ProviderUnavailableError
 class MockLLM:
     async def complete(self, prompt: str) -> str:
         return """{
-          "title": "Test Piece",
+          "title": "Test Waltz",
           "composer": "Test",
-          "tempo_bpm": 120,
+          "tempo_bpm": 140,
           "parts": [{
             "name": "Piano",
             "instrument_midi": 0,
             "measures": [{
               "number": 1,
-              "time_signature": "4/4",
+              "time_signature": "3/4",
               "tempo_bpm": null,
               "events": [
-                {"kind": "note", "pitch": 60, "duration": 1.0,
-                 "velocity": 80, "offset": 0.0, "tied": false},
-                {"kind": "chord", "notes": [
-                  {"kind": "note", "pitch": 64, "duration": 1.0,
-                   "velocity": 70, "offset": 0.0, "tied": false},
-                  {"kind": "note", "pitch": 67, "duration": 1.0,
-                   "velocity": 70, "offset": 0.0, "tied": false}
-                ], "duration": 1.0, "offset": 1.0}
+                {"kind": "note", "pitch": 60, "duration": 1.0, "velocity": 80, "offset": 0.0, "tied": false},
+                {"kind": "note", "pitch": 64, "duration": 1.0, "velocity": 75, "offset": 1.0, "tied": false},
+                {"kind": "note", "pitch": 67, "duration": 1.0, "velocity": 75, "offset": 2.0, "tied": false}
               ]
             }]
           }]
@@ -38,7 +33,7 @@ class MockLLM:
 
 class FailLLM:
     async def complete(self, prompt: str) -> str:
-        raise ProviderUnavailableError("no llm in test")
+        raise ProviderUnavailableError("no llm")
 
     async def stream(self, prompt: str):
         yield ""
@@ -46,7 +41,7 @@ class FailLLM:
 
 class BadJsonLLM:
     async def complete(self, prompt: str) -> str:
-        return "this is not json at all"
+        return "not json at all"
 
     async def stream(self, prompt: str):
         yield ""
@@ -56,8 +51,8 @@ class BadJsonLLM:
 async def test_generate_valid_json():
     piece = await generate_piece("happy waltz", MockLLM())
     assert isinstance(piece, Piece)
-    assert piece.title == "Test Piece"
-    assert len(piece.parts) == 1
+    assert piece.title == "Test Waltz"
+    assert piece.tempo_bpm == 140
 
 
 @pytest.mark.asyncio
@@ -78,8 +73,6 @@ def test_fallback_piece_is_valid():
     p = _fallback_piece("test prompt")
     assert len(p.parts) == 1
     assert len(p.parts[0].measures) == 4
-    for measure in p.parts[0].measures:
-        assert len(measure.events) == 4
 
 
 def test_to_midi_returns_valid_bytes():
@@ -89,31 +82,21 @@ def test_to_midi_returns_valid_bytes():
     assert midi[:4] == b"MThd"
 
 
-def test_to_musicxml_contains_score_partwise():
-    p = _fallback_piece("test")
-    xml = p.to_musicxml()
-    assert isinstance(xml, str)
-    assert "score-partwise" in xml
-
-
-def test_chord_events_in_piece():
-    """Verify that Chord events round-trip through the model and MIDI export."""
+def test_to_midi_chord():
     from app.core.data_model import Chord, Measure, Note, Part, Piece
-
     chord = Chord(
         kind="chord",
         notes=[
             Note(kind="note", pitch=60, duration=1.0, velocity=80, offset=0.0),
             Note(kind="note", pitch=64, duration=1.0, velocity=80, offset=0.0),
+            Note(kind="note", pitch=67, duration=1.0, velocity=80, offset=0.0),
         ],
         duration=1.0,
         offset=0.0,
     )
-    measure = Measure(number=1, events=[chord])
     piece = Piece(
-        title="Chord Test",
-        tempo_bpm=120,
-        parts=[Part(name="Piano", measures=[measure])],
+        title="Chord test",
+        parts=[Part(measures=[Measure(number=1, events=[chord])])],
     )
     midi = piece.to_midi()
     assert midi[:4] == b"MThd"

@@ -9,45 +9,40 @@
 <body>
   <header>
     <h1>MusicMakerLM</h1>
-    <p class="tagline">Generate · Analyze · Teach</p>
+    <span>generate · analyze · teach · symbolic core · local-first AI</span>
   </header>
 
   <main>
-    <section class="generate-section">
-      <label for="prompt">Describe the music you want to create:</label>
-      <textarea id="prompt" rows="3" placeholder="e.g. A gentle waltz in G major, melancholic and slow"></textarea>
+    <!-- LEFT: Input + Playback -->
+    <div class="panel">
+      <h2>Compose</h2>
+      <textarea id="prompt" placeholder="Describe the music you want…
+e.g. &quot;a melancholy waltz in minor&quot; or &quot;upbeat jazz with syncopation&quot;"></textarea>
       <button id="generate-btn">Generate</button>
-      <div id="status" class="status hidden"></div>
-    </section>
+      <div id="status"></div>
 
-    <section id="results" class="hidden">
-      <div class="columns">
-        <div class="col">
-          <h2>Score (MusicXML)</h2>
-          <!-- Issue #3: replace this <pre> with OpenSheetMusicDisplay -->
-          <pre id="score-container"></pre>
-        </div>
-        <div class="col">
-          <h2>Audio</h2>
-          <div id="audio-section">
-            <audio id="player" controls class="hidden"></audio>
-            <p id="audio-unavailable" class="hidden muted">
-              Audio unavailable (FluidSynth not installed)
-            </p>
-            <a id="midi-download" href="#" download="piece.mid" class="btn-secondary hidden">
-              Download MIDI
-            </a>
-          </div>
+      <div class="label">Playback (WAV via FluidSynth)</div>
+      <audio id="player" controls></audio>
+      <div id="audio-unavailable">Audio unavailable — FluidSynth not installed or no SoundFont found.</div>
+      <a id="midi-download">⬇ Download MIDI</a>
+    </div>
 
-          <h2>Analysis</h2>
-          <pre id="analysis-output"></pre>
+    <!-- RIGHT: Score + Analysis + Explanation -->
+    <div class="panel">
+      <h2>Score <span style="font-size:0.7rem;color:var(--muted)">(MusicXML — OSMD viewer coming in Issue #3)</span></h2>
+      <pre id="score-container">Score will appear here after generation.</pre>
 
-          <h2>Lesson</h2>
-          <div id="explanation-output"></div>
-        </div>
+      <h2>Analysis</h2>
+      <pre id="analysis-output">Analysis will appear here.</pre>
+
+      <h2>Tutor Explanation</h2>
+      <div id="explanation-output" style="min-height:3rem;color:var(--muted)">
+        Explanation will appear here.
       </div>
-    </section>
+    </div>
   </main>
+
+  <footer>MusicMakerLM v0.1 · symbolic core · $0 build phase · <a href="/docs" style="color:var(--accent)">API docs</a></footer>
 
   <script src="/js/app.js"></script>
 </body>

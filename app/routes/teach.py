@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -26,6 +28,6 @@ async def teach_endpoint(
 ):
     piece = Piece.model_validate(body.piece_json)
     analysis = analyze_piece(piece)
-    provider = get_llm_provider(settings)
-    explanation = await explain_analysis(analysis, provider)
+    llm = get_llm_provider(settings)
+    explanation = await explain_analysis(analysis, llm)
     return TeachResponse(analysis=analysis, explanation=explanation)

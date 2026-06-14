@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import logging
 import os
 import tempfile
 
-from app.core.data_model import Chord, Note, Piece
+from app.core.data_model import Note, Piece
 
 logger = logging.getLogger(__name__)
 
-_SAFE_DEFAULTS = {
+_EMPTY_ANALYSIS: dict = {
     "key_signature": "unknown",
     "mode": "unknown",
-    "time_signature": "unknown",
+    "time_signature": "4/4",
     "tempo_bpm": 120.0,
     "num_measures": 0,
     "num_parts": 0,
@@ -21,109 +23,119 @@ _SAFE_DEFAULTS = {
 }
 
 
+def _collect_pitches(piece: Piece) -> list[int]:
+    pitches = []
+    for part in piece.parts:
+        for measure in part.measures:
+            for event in measure.events:
+                if isinstance(event, Note):
+                    pitches.append(event.pitch)
+                else:
+                    pitches.extend(n.pitch for n in event.notes)
+    return pitches
+
+
 def analyze_piece(piece: Piece) -> dict:
-    """Return analysis dict. Always returns all keys; never raises."""
-    result: dict = {
-        **_SAFE_DEFAULTS,
-        "tempo_bpm": piece.tempo_bpm,
-        "num_parts": len(piece.parts),
-        "warnings": [],
-    }
+    warnings: list[str] = []
+    result = dict(_EMPTY_ANALYSIS)
+    result["warnings"] = warnings
 
-    # --- Basic stats from the Piece model (no music21 needed) ---
+    all_pitches = _collect_pitches(piece)
+    result["num_parts"] = len(piece.parts)
+    result["num_measures"] = len(piece.parts[0].measures) if piece.parts else 0
+    result["note_count"] = len(all_pitches)
+    result["tempo_bpm"] = piece.tempo_bpm
+
+    if all_pitches:
+        result["pitch_range"] = {"low": min(all_pitches), "high": max(all_pitches)}
+    else:
+        warnings.append("No notes found — pitch range unavailable")
+
+    if piece.parts and piece.parts[0].measures:
+        result["time_signature"] = piece.parts[0].measures[0].time_signature
+
     try:
-        all_pitches: list[int] = []
-        note_count = 0
-        max_measures = 0
-
-        for part in piece.parts:
-            max_measures = max(max_measures, len(part.measures))
-            for measure in part.measures:
-                for event in measure.events:
-                    if isinstance(event, Note):
-                        all_pitches.append(event.pitch)
-                        note_count += 1
-                    elif isinstance(event, Chord):
-                        for n in event.notes:
-                            all_pitches.append(n.pitch)
-                        note_count += 1
-
-        result["num_measures"] = max_measures
-        result["note_count"] = note_count
-        if all_pitches:
-            result["pitch_range"] = {"low": min(all_pitches), "high": max(all_pitches)}
-
-        # Time signature and tempo from first measure
-        if piece.parts and piece.parts[0].measures:
-            first = piece.parts[0].measures[0]
-            result["time_signature"] = first.time_signature
-            if first.tempo_bpm is not None:
-                result["tempo_bpm"] = first.tempo_bpm
-
-    except Exception as e:
-        result["warnings"].append(f"basic stats failed: {e}")
-
-    # --- music21 key/chord analysis (optional, wrapped) ---
-    try:
-        from music21 import converter
-
         xml_str = piece.to_musicxml()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            xml_path = os.path.join(tmpdir, "score.musicxml")
-            with open(xml_path, "w", encoding="utf-8") as f:
-                f.write(xml_str)
-            score = converter.parse(xml_path)
-
-        detected_key = score.analyze("key")
-        result["key_signature"] = str(detected_key)
-        mode = getattr(detected_key, "mode", "unknown")
-        result["mode"] = mode if mode in ("major", "minor") else "unknown"
-
-        chord_syms, roman_nums, chord_warnings = _analyze_chords(score, detected_key)
-        result["chord_symbols"] = chord_syms[:8]
-        result["roman_numeral_attempts"] = roman_nums[:8]
-        result["warnings"].extend(chord_warnings)
-
+        _enrich_with_music21(xml_str, result, warnings)
     except Exception as e:
-        result["warnings"].append(f"music21 analysis failed: {e}")
+        warnings.append(f"music21 analysis failed: {e}")
+        logger.warning("music21 analysis error: %s", e)
 
     return result
 
 
-def _analyze_chords(score, detected_key) -> tuple[list[str], list[str], list[str]]:
-    """Return (chord_symbols, roman_numerals, warnings). Each catches its own errors."""
-    from music21 import harmony
+def _enrich_with_music21(xml_str: str, result: dict, warnings: list[str]) -> None:
+    from music21 import converter, meter
+    from music21 import tempo as m21tempo
 
-    chord_symbols: list[str] = []
-    roman_numerals: list[str] = []
-    warnings: list[str] = []
+    with tempfile.NamedTemporaryFile(
+        suffix=".musicxml", delete=False, mode="w", encoding="utf-8"
+    ) as f:
+        f.write(xml_str)
+        tmp_path = f.name
 
     try:
-        from music21.chord import Chord as M21Chord
+        score = converter.parse(tmp_path)
 
-        chordified = score.chordify()
-        for c in chordified.recurse().getElementsByClass(M21Chord):
-            try:
-                cs = harmony.chordSymbolFromChord(c)
-                if cs and cs.figure:
-                    chord_symbols.append(cs.figure)
-            except Exception:
-                pass
-    except Exception as e:
-        warnings.append(f"chord symbol extraction skipped: {e}")
+        try:
+            detected_key = score.analyze("key")
+            result["key_signature"] = str(detected_key)
+            result["mode"] = detected_key.mode
+        except Exception as e:
+            warnings.append(f"Key detection failed: {e}")
 
-    if chord_symbols:
-        for sym in chord_symbols:
-            try:
-                from music21 import roman
-                rn = roman.romanNumeralFromChord(
-                    harmony.ChordSymbol(sym), detected_key
-                )
-                roman_numerals.append(str(rn.figure))
-            except Exception:
-                roman_numerals.append("?")
-    else:
-        warnings.append("chord analysis skipped: too few notes or unsupported voicing")
+        try:
+            ts = score.recurse().getElementsByClass(meter.TimeSignature).first()
+            if ts:
+                result["time_signature"] = str(ts)
+        except Exception as e:
+            warnings.append(f"Time signature extraction failed: {e}")
 
-    return chord_symbols, roman_numerals, warnings
+        try:
+            mm = score.recurse().getElementsByClass(m21tempo.MetronomeMark).first()
+            if mm:
+                result["tempo_bpm"] = float(mm.number)
+        except Exception as e:
+            warnings.append(f"Tempo extraction failed: {e}")
+
+        try:
+            chord_symbols, roman_numerals = _chordify(score, result.get("key_signature"))
+            result["chord_symbols"] = chord_symbols[:8]
+            result["roman_numeral_attempts"] = roman_numerals[:8]
+        except Exception as e:
+            warnings.append(f"Chord analysis skipped: {e}")
+
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
+def _chordify(score, key_sig_str: str | None) -> tuple[list[str], list[str]]:
+    from music21 import harmony, roman
+    from music21.chord import Chord as M21Chord
+
+    chordified = score.chordify()
+    chord_symbols: list[str] = []
+    roman_numerals: list[str] = []
+
+    detected_key = score.analyze("key")
+
+    for c in chordified.recurse().getElementsByClass(M21Chord):
+        if len(c.pitches) < 2:
+            continue
+        try:
+            cs = harmony.chordSymbolFromChord(c)
+            sym = cs.figure if cs else c.commonName
+            chord_symbols.append(sym)
+        except Exception:
+            chord_symbols.append("?")
+            roman_numerals.append("?")
+            continue
+
+        try:
+            rn = roman.romanNumeralFromChord(c, detected_key)
+            roman_numerals.append(str(rn.figure))
+        except Exception:
+            roman_numerals.append("?")
+
+    return chord_symbols, roman_numerals
