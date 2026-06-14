@@ -1,6 +1,9 @@
 {
   "name": "MusicMakerLM",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": { "version": "latest" }
+  },
   "postCreateCommand": "sudo apt-get install -y fluidsynth && pip install -r requirements.txt && cp -n .env.example .env",
   "forwardPorts": [8000],
   "portsAttributes": {
