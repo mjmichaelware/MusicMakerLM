@@ -1,93 +1,107 @@
 # MusicMakerLM
 
-Generate, analyze, and teach music — built on a symbolic core (MIDI + MusicXML), $0 during development.
+> **Symbolic Music. Emotional Depth. Perfectly Imperfect Performance.**
 
-Every external dependency (LLM, audio synthesis) sits behind a swap layer in `app/providers/`.
-Build and test entirely free with Ollama + FluidSynth; flip to paid APIs when monetizing.
+**A sovereign, research-backed, symbolically editable AI music system that understands why music moves people — and can explain it.**
 
-## Quick Start
+MusicMakerLM is not another text-to-audio generator. It is a full symbolic music development environment built on deterministic theory, psychological modeling of emotional impact, and intentional human performance nuance.
 
-```bash
-# 1. Install Python deps
-pip install -r requirements.txt
+It exists because current AI music tools optimize for speed and surface polish while stripping away the very things that make music beautiful: controlled imperfection, ensemble variation, expressive micro-timing, and the deep structural understanding that turns notes into meaning.
 
-# 2. Copy environment config
-cp .env.example .env
+---
 
-# 3. (Optional) Install FluidSynth for WAV audio
-#    Ubuntu/Debian:  sudo apt-get install fluidsynth
-#    macOS:          brew install fluid-synth
+## The Core Philosophy
 
-# 4. (Optional) Start Ollama for LLM generation
-#    Install from https://ollama.com, then:
-ollama serve &
-./scripts/pull_llm_model.sh
+Real musical beauty often lives in **intentional imperfection**:
 
-# 5. Start the app
-./run.sh
-# → http://localhost:8000
-```
+- The slight timing offsets between first and second violins that make a section sound alive instead of mechanical.
+- Natural vibrato variation across players.
+- The human "groove" and rubato that no perfectly quantized grid can capture.
+- The emotional weight that comes from tension, surprise, and resolution — not just pretty sounds.
 
-The app works without Ollama (returns a deterministic stub piece) and without FluidSynth
-(`wav_b64` will be `null` in API responses).
+Current systems either:
+- Generate clean but soulless audio, or
+- Produce MIDI that still feels robotic because they treat performance parameters as afterthoughts.
 
-## Run Tests
+MusicMakerLM treats **expressive performance modeling** as a first-class citizen, on equal footing with harmony, counterpoint, and form.
 
-```bash
-pip install -r requirements-dev.txt
-pytest -q
-```
+---
 
-Tests pass with no external services installed.
+## How It Connects to the Sovereign Stack
 
-## API
+MusicMakerLM is being built as a **domain application** on top of the ATROPOS + SpecGraph foundation:
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/health` | GET | Service health check |
-| `/api/v1/generate` | POST | Generate a piece from a text prompt |
-| `/api/v1/analyze` | POST | Analyze a piece (key, chords, stats) |
-| `/api/v1/teach` | POST | Analyze + LLM explanation |
+- **SpecGraph Foundry** provides the rigorous planning layer — turning musical requirements, style references, and emotional targets into research-enriched, verifiable blueprints with full provenance.
+- **ATROPOS** serves as the execution and self-improvement engine. It consumes SpecGraph handoffs, operates inside explicit territory, runs deterministic verification, and gets stronger with every complex creative project it helps build.
 
-Interactive docs: `http://localhost:8000/docs`
+This creates a powerful closed loop:
+**Musical intent + research → SpecGraph (verified plan) → ATROPOS (deterministic execution + learning) → MusicMakerLM (symbolic, expressive, teachable output).**
 
-## Project Structure
+The result is a music system that can eventually generate, analyze, teach, and emotionally move — while remaining fully local, auditable, and improvable over time.
 
-```
-app/
-  core/          ← all music logic (generation, analysis, tutor, render)
-  providers/     ← LLM and audio swap layer ($0 local ↔ paid API)
-  routes/        ← FastAPI endpoints
-  llm/           ← prompts
-  db/            ← SQLAlchemy models + session
-static/          ← single-page UI
-tests/           ← pytest (no external deps needed)
-scripts/         ← setup helpers
-corpus/          ← downloaded scores (gitignored)
-soundfonts/      ← .sf2 files (gitignored)
-models/          ← Ollama model weights (gitignored)
-```
+---
 
-See [AGENTS.md](AGENTS.md) for the full architecture guide.
+## What Makes It Different
 
-## Provider Swap (Free → Paid)
+| Dimension                      | Typical AI Music Tools                  | MusicMakerLM |
+|--------------------------------|-----------------------------------------|--------------|
+| **Core Representation**        | Audio or simple MIDI                    | Full symbolic hypergraph (Piece → Part → Measure → Note/Event) |
+| **Theory & Analysis**          | None or superficial                     | Deterministic music21 + custom solvers (key, Roman numerals, form, motif, tension, voice leading) |
+| **Expressive Performance**     | Generic humanization or none            | Style-specific, psychologically grounded "perfectly imperfect" modeling (vibrato, micro-timing, ensemble variation, embodiment) |
+| **Emotional Impact**           | Surface statistics                      | Explicit tension curves, Huron surprise, BRECVEMA mechanism proxies, narrative arc planning |
+| **Teachability**               | None                                    | Analysis-derived explanations adapted to student level |
+| **Editability & Portability**  | Locked audio or weak MIDI               | Full symbolic editing + lossless MIDI/MusicXML round-trip to any DAW or notation software |
+| **Sovereignty**                | Cloud-only                              | Local-first, offline, bundled knowledge packs, public-domain corpus |
+| **Self-Improvement**           | None                                    | Internal reward signals from Critic evaluations feeding back into performance and generation models |
 
-Set environment variables to switch backends:
+---
 
-```
-LLM_PROVIDER=openai     # swap Ollama → OpenAI (Issue #7)
-AUDIO_PROVIDER=api      # swap FluidSynth → hosted audio (Issue #8)
-```
+## The "Perfectly Imperfect" Vision
 
-No code changes required — only config.
+This is the heart of MusicMakerLM.
 
-## Build Order
+A section of 8 violins doesn't sound beautiful because they play in perfect unison. It sounds beautiful because they are *slightly* off — in timing, in vibrato depth, in attack — in ways that feel human and alive.
 
-The blueprint follows this sequence:
-1. ✅ **Starting tree** — data model, providers, analysis, tutor, render, routes, basic UI
-2. ⬜ Corpus download + style profiles (Issue #4)
-3. ⬜ style_engine.py — "compose in the style of Mahler" (Issue #12)
-4. ⬜ OSMD notation viewer (Issue #3)
-5. ⬜ Auth + billing (Issues #1, #9)
-6. ⬜ Paid provider flip (Issues #7, #8)
-7. ⬜ Docker + CI + marketing site (Issues #2, #10, #13)
+A great pianist doesn't play with machine precision. The slight variations in timing and dynamics are what create phrasing, tension, and release.
+
+MusicMakerLM is being built to **model and generate these controlled imperfections intentionally**, tied to emotional and stylistic goals. Not as noise to be removed, but as expressive parameters that serve the music.
+
+This is why the architecture emphasizes:
+- Dedicated Expression Virtuoso agents in the hierarchical swarm
+- Performance parameter generators with embodiment and somatic mapping
+- Emotional Planner + Critic loops that can evaluate whether the imperfections served the intended affect
+- Style-specific humanization models that know the difference between Baroque evenness and Romantic rubato
+
+---
+
+## Current Direction (Mid-2026)
+
+MusicMakerLM is in active research and early implementation, with a strong foundation already defined:
+
+- Symbolic core with deterministic analysis (key, chords, Roman numerals, form, tension, voice leading)
+- Hierarchical territory-based agent swarm designed for creative + rule-bound work
+- Explicit modeling of emotional mechanisms and performance nuance
+- Plans for bundled, distributable knowledge packs (instrument ranges, articulation, historical style profiles)
+- Commitment to offline operation, public-domain grounding, and full symbolic editability
+
+The system is being developed with the same high-discipline standards as ATROPOS and SpecGraph — no stubs, strong verification, and a clear path to measurable superiority on correctness, expressiveness, teachability, and sovereignty.
+
+---
+
+## The Larger Vision
+
+By building MusicMakerLM on the ATROPOS + SpecGraph stack, the goal is to create something that doesn't just generate music, but **understands it, explains it, and improves at making it emotionally powerful** over time.
+
+A system that can eventually:
+- Generate a full symphony movement with cumulative emotional narrative
+- Explain its harmonic and structural choices at multiple levels of theory knowledge
+- Model real human ensemble performance with intentional, style-appropriate imperfection
+- Learn from its own Critic evaluations and user feedback
+
+This is the kind of music AI that respects both the mathematics of music **and** the psychology of why it moves us.
+
+---
+
+**Symbolic. Expressive. Teachable. Sovereign.**
+
+*Built for musicians who want depth, control, and beauty that lasts.*
